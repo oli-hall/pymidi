@@ -62,7 +62,7 @@ def process_header(data):
 
 
 def process_track_chunk(data, length):
-    # TODO does this need length?
+    # TODO does this need length? Only here for debugging
     print("\nTRACK CHUNK")
     print("length: {}".format(length))
 
@@ -70,7 +70,7 @@ def process_track_chunk(data, length):
     # <delta time> is a variable length field
     while len(data) > 0:
         data, delta = variable_length_field(data)
-        print("Delta:", delta)
+        print("\nDelta:", delta)
         # where <event> is
         # <midi event>
         # <sysex event>
@@ -90,7 +90,7 @@ def process_meta_event(data):
 
     type = data[:8].hex
     remainder, length = variable_length_field(data[8:])
-    print("META EVENT, length {}".format(length))
+    # print("META EVENT, length {}".format(length))
     if type == "00":
         print("Sequence Number")
         # This is an optional event, which must occur only at the start of a track, before any non-zero delta-time.
@@ -100,41 +100,123 @@ def process_meta_event(data):
         #
         # For Format 1 files, this event should occur on the first track only.
     elif type == "01":
-        print("Text Event")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Text Event: {}".format(text))
     elif type == "02":
-        print("Copyright Notice")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Copyright Notice: {}".format(text))
     elif type == "03":
-        print("Sequence/Track Name")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Sequence/Track Name: {}".format(text))
     elif type == "04":
-        print("Instrument Name")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Instrument Name: {}".format(text))
     elif type == "05":
-        print("Lyric")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Lyric: {}".format(text))
     elif type == "06":
-        print("Marker")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Marker: {}".format(text))
     elif type == "07":
-        print("Cue Point")
+        text = remainder[:length * 8]
+        remainder = remainder[length * 8:]
+        print("Cue Point: {}".format(text))
     elif type == "20":
-        print("MIDI Channel Prefix")
+        # MIDI Channel Prefix
+        # Associate all following meta-events and sysex-events with the specified MIDI channel, until the next
+        # <midi_event> (which must contain MIDI channel information).
+        if length != 1:
+            print("This event has the wrong length!\nExiting...")
+            exit(1)
+
+        channel = remainder[:8].hex
+        remainder = remainder[8:]
+        print("MIDI Channel Prefix: channel {}".format(channel))
     elif type == "21":
-        print("MIDI Prefix Port")
+        # MIDI Prefix Port
+        if length != 1:
+            print("This event has the wrong length!\nExiting...")
+            exit(1)
+
+        device = remainder[:8]
+        remainder = remainder[8:]
+        print("MIDI Prefix Port: device: {}".format(device))
     elif type == "2F":
         print("End of Track")
+        # This event is not optional.
+        # It is used to give the track a clearly defined length, which is essential information if the track is looped
+        # or concatenated with another track
+        # TODO add checks to make sure that this event is present
+        if length:
+            print("This event should not have any length!\nExiting...")
+            exit(1)
     elif type == "51":
-        print("Set Tempo")
+        # Set Tempo
+        # This sets the tempo in microseconds per quarter note. This means a change in the unit-length of a delta-time
+        # tick. (note 1)
+        # If not specified, the default tempo is 120 beats/minute, which is equivalent to tttttt=500000
+        if length != 3:
+            print("This event has the wrong length!\nExiting...")
+            exit(1)
+
+        new_tempo = remainder[:8 * 3]
+        remainder = remainder[8 * 3:]
+        print("Set Tempo: {}".format(new_tempo))
     elif type == "54":
+        # SMTPE Offset
+        # This (optional) event specifies the SMTPE time at which the track is to start.
+        # This event must occur before any non-zero delta-times, and before any MIDI events.
+        # In a format 1 MIDI file, this event must be on the first track (the tempo map).
+        if length != 5:
+            print("This event has the wrong length!\nExiting...")
+            exit(1)
+
+        # TODO expand this and extract sub-fields
+        smtpe_offset = remainder[:8 * 5]
+        remainder = remainder[8 * 5:]
         print("SMTPE Offset")
     elif type == "58":
         print("Time Signature")
+        if length != 4:
+            print("This event has the wrong length!\nExiting...")
+            exit(1)
+
+        # TODO expand extraction of sub-elements here
+        time_sig = remainder[:8 * 4]
+        remainder = remainder[8 * 4:]
     elif type == "59":
-        print("Key Signature")
+        # Key Signature
+        # Key Signature, expressed as the number of sharps or flats, and a major/minor flag.
+        # 0 represents a key of C, negative numbers represent 'flats', while positive numbers represent 'sharps'.
+        if length != 2:
+            print("This event has the wrong length!\nExiting...")
+            exit(1)
+
+        sf = remainder[:8].int
+        mi = remainder[8:16].int
+        remainder = remainder[16:]
+        print("Key Signature. number of sharps/flats: {}, major/minor: {}".format(sf, mi))
     elif type == "7F":
         print("Sequencer-Specific Meta-event")
+        # This is the MIDI-file equivalent of the System Exclusive Message.
+        # A manufacturer may incorporate sequencer-specific directives into a MIDI file using this event.
+        # consists of <id> + <data>, length is length of both of these fields combined
+        # <id> is either one or three bytes, and is the Manufacturer ID
+        # This value is the same as is used for MIDI System Exclusive messages
+        # <data> 8-bit binary data
+        remainder = remainder[length * 8:]
     else:
         print("Unrecognised Meta event")
+        # skip the data anyway
+        remainder = remainder[length * 8:]
 
-    data = remainder[:length * 8]
-
-    return remainder[length * 8:]
+    return remainder
 
 
 def variable_length_field(data):
@@ -151,7 +233,7 @@ def variable_length_field(data):
             extracted.append(byte[1:])
             return bits[i + 8:], extracted.int
 
-    # handle default case?
+    # TODO improve edge-case handling
     raise Exception("Not a variable length field")
 
 
