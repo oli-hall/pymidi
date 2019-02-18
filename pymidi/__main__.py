@@ -93,7 +93,8 @@ def process_meta_event(data):
 
     type = data[:8].hex
     remainder, length = variable_length_field(data[8:])
-    # print("META EVENT, length {}".format(length))
+    
+    # TODO make sure that these comparisons are case correct/case-insensitive
     if type == "00":
         print("Sequence Number")
         # This is an optional event, which must occur only at the start of a track, before any non-zero delta-time.
@@ -150,7 +151,7 @@ def process_meta_event(data):
         device = remainder[:8]
         remainder = remainder[8:]
         print("MIDI Prefix Port: device: {}".format(device))
-    elif type == "2F":
+    elif type == "2f":
         print("End of Track")
         # This event is not optional.
         # It is used to give the track a clearly defined length, which is essential information if the track is looped
@@ -215,7 +216,7 @@ def process_meta_event(data):
         # <data> 8-bit binary data
         remainder = remainder[length * 8:]
     else:
-        print("Unrecognised Meta event")
+        print("Unrecognised Meta event: {}".format(type))
         # skip the data anyway
         remainder = remainder[length * 8:]
 
