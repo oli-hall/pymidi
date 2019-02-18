@@ -93,7 +93,7 @@ def process_meta_event(data):
 
     type = data[:8].hex
     remainder, length = variable_length_field(data[8:])
-    
+
     # TODO make sure that these comparisons are case correct/case-insensitive
     if type == "00":
         print("Sequence Number")
@@ -171,7 +171,7 @@ def process_meta_event(data):
 
         new_tempo = remainder[:8 * 3]
         remainder = remainder[8 * 3:]
-        print("Set Tempo: {}".format(new_tempo))
+        print("Set Tempo: {} μs/quarter-note".format(new_tempo.int))
     elif type == "54":
         # SMTPE Offset
         # This (optional) event specifies the SMTPE time at which the track is to start.
@@ -186,7 +186,7 @@ def process_meta_event(data):
         remainder = remainder[8 * 5:]
         print("SMTPE Offset")
     elif type == "58":
-        print("Time Signature")
+        # Time Signature
         if length != 4:
             print("This event has the wrong length!\nExiting...")
             exit(1)
@@ -194,6 +194,7 @@ def process_meta_event(data):
         # TODO expand extraction of sub-elements here
         time_sig = remainder[:8 * 4]
         remainder = remainder[8 * 4:]
+        print("Time Signature: {}".format(time_sig))
     elif type == "59":
         # Key Signature
         # Key Signature, expressed as the number of sharps or flats, and a major/minor flag.
