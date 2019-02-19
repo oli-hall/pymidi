@@ -72,7 +72,6 @@ def process_track_chunk(data, length):
         data, delta = variable_length_field(data)
         print("\nDelta:", delta)
         # where <event> is
-        # <midi event>
         # <sysex event>
         # TODO extract these prefixes as constants
         if data[:8] == BitArray("0xF0") or data[:8] == BitArray("0xF7"):
@@ -80,8 +79,9 @@ def process_track_chunk(data, length):
         # <meta event>
         elif data[:8] == BitArray("0xFF"):
             data = process_meta_event(data)
+        # <midi event>
         else:
-            print("no other identified events, skipping...")
+            print("Must be a MIDI event")
             break
 
 
