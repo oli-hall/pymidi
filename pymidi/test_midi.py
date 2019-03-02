@@ -2,7 +2,7 @@ import unittest
 
 from bitstring import BitArray
 
-from pymidi.__main__ import variable_length_field
+from pymidi.utils import variable_length_field
 
 
 class MidiTest(unittest.TestCase):
