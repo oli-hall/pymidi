@@ -12,8 +12,10 @@ handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)
 log.addHandler(handler)
 
 
-def process_chunk(type, length, data):
+def process_chunk(type, length, raw_data):
     log.debug("processing chunk (type: {}, length: {} bytes)...".format(type, length))
+
+    data = BitArray(raw_data)
 
     if type == b"MThd":
         process_header(data)
@@ -26,9 +28,7 @@ def process_chunk(type, length, data):
 
 def process_header(data):
     log.info("Parsing header chunk...")
-    bits = BitArray(data)
-
-    format = bits[:16].int
+    format = data[:16].int
     # Format 0: a single track
     # Format 1: one or more simultaneous tracks. Normally first Track chunk here is special, and contains
     # all the tempo information in a 'Tempo Map'
@@ -37,9 +37,9 @@ def process_header(data):
         log.error("Unrecognised format: {}\n Exiting...".format(format))
         exit(1)
 
-    track_count = bits[17:32].int
+    track_count = data[17:32].int
 
-    division = bits[-16:]
+    division = data[-16:]
 
     if division[0] == 0:
         # bits 0-14 represent number of delta time units in each quarter-note
