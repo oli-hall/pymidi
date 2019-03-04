@@ -77,26 +77,18 @@ def process_header(data):
 def process_track_chunk(data):
     log.info("Parsing Track Chunk...")
 
-    # a series of <delta time><event>
-    # <delta time> is a variable length field
     events = []
     while len(data) > 0:
         data, delta = variable_length_field(data)
-        # where <event> is
-        # <sysex event>, first byte is F0 or F7
-        # TODO extract these prefixes as constants
-
         prefix = data[:8]
         if prefix == F0_SYSEX_EVENT_PREFIX or prefix == F7_SYSEX_EVENT_PREFIX:
             log.debug("Sysex event")
             data, event = process_sysex_event(prefix, data[8:])
             events.append((delta, event))
-        # <meta event> first byte is FF
         elif prefix == META_EVENT_PREFIX:
             log.debug("Meta event")
-            data, event = process_meta_event(data)
+            data, event = process_meta_event(data[8:])
             events.append((delta, event))
-        # <midi event>
         else:
             log.debug("MIDI event (?)")
             data = process_midi_event(data)
@@ -108,17 +100,16 @@ def process_track_chunk(data):
 
 
 def process_meta_event(data):
-    # drop the leading FF
-    data = data[8:]
-
     type = data[:8].hex
-    remainder, length = variable_length_field(data[8:])
+    data, length = variable_length_field(data[8:])
 
-    # TODO split out remainder and event data at the start
+    event_data = data[:length * 8]
+    remainder = data[length * 8:]
+
     event = {
         "type": "META",
         "sub_type": "Unknown",
-        "data": remainder[length * 8:]
+        "data": event_data
     }
 
     # TODO make sure that these comparisons are case correct/case-insensitive
@@ -132,39 +123,25 @@ def process_meta_event(data):
         # For Format 1 files, this event should occur on the first track only.
     elif type == "01":
         event["sub_type"] = "Text Event"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "02":
         event["sub_type"] = "Copyright Notice"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "03":
         event["sub_type"] = "Sequence/Track Name"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "04":
         event["sub_type"] = "Instrument Name"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "05":
         event["sub_type"] = "Lyric"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "06":
         event["sub_type"] = "Marker"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "07":
         event["sub_type"] = "Cue Point"
-        event["text"] = remainder[:length * 8].bytes
-
-        remainder = remainder[length * 8:]
+        event["text"] = event_data[:length * 8].bytes
     elif type == "20":
         # MIDI Channel Prefix
         # Associate all following meta-events and sysex-events with the specified MIDI channel, until the next
@@ -174,9 +151,7 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "MIDI Channel Prefix"
-        event["channel"] = remainder[:8].hex
-
-        remainder = remainder[8:]
+        event["channel"] = event_data[:8].hex
     elif type == "21":
         # MIDI Prefix Port
         if length != 1:
@@ -184,9 +159,7 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "MIDI Prefix Port"
-        event["device"] = remainder[:8]
-
-        remainder = remainder[8:]
+        event["device"] = event_data[:8]
     elif type == "2f":
         print("End of Track")
         # This event is not optional.
@@ -208,9 +181,7 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "Set Tempo"
-        event["new_tempo"] = remainder[:8 * 3]
-
-        remainder = remainder[8 * 3:]
+        event["new_tempo"] = event_data[:8 * 3]
     elif type == "54":
         # SMTPE Offset
         # This (optional) event specifies the SMTPE time at which the track is to start.
@@ -221,13 +192,11 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "SMTPE Offset"
-        event["hours"] = remainder[:8]
-        event["minutes"] = remainder[8:16]
-        event["seconds"] = remainder[16:24]
-        event["frames"] = remainder[24:32]
-        event["fractional_frames"] = remainder[32:40]
-
-        remainder = remainder[40:]
+        event["hours"] = event_data[:8]
+        event["minutes"] = event_data[8:16]
+        event["seconds"] = event_data[16:24]
+        event["frames"] = event_data[24:32]
+        event["fractional_frames"] = event_data[32:40]
     elif type == "58":
         # Time Signature
         if length != 4:
@@ -235,14 +204,12 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "Time Signature"
-        event["numerator"] = remainder[:8]
-        event["denominator"] = remainder[8:16]
+        event["numerator"] = event_data[:8]
+        event["denominator"] = event_data[8:16]
         # MIDI clocks per metronome click
-        event["clocks_per_tick"] = remainder[16:24]
+        event["clocks_per_tick"] = event_data[16:24]
         # number of 1/32 notes per 24 MIDI clocks (8 is standard)
-        event["32nd_notes_per_24_clocks"] = remainder[24:32]
-
-        remainder = remainder[32:]
+        event["32nd_notes_per_24_clocks"] = event_data[24:32]
     elif type == "59":
         # Key Signature
         # Key Signature, expressed as the number of sharps or flats, and a major/minor flag.
@@ -252,10 +219,8 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "Key Signature"
-        event["sharps_flats"] = remainder[:8].int
-        event["major_minor"] = remainder[8:16].int
-
-        remainder = remainder[16:]
+        event["sharps_flats"] = event_data[:8].int
+        event["major_minor"] = event_data[8:16].int
     elif type == "7F":
         # This is the MIDI-file equivalent of the System Exclusive Message.
         # A manufacturer may incorporate sequencer-specific directives into a MIDI file using this event.
@@ -265,13 +230,9 @@ def process_meta_event(data):
         # <data> 8-bit binary data
 
         event["sub_type"] = "Sequencer-Specific Meta-event"
-        event["data"] = remainder[:length * 8]
-
-        remainder = remainder[length * 8:]
+        event["data"] = event_data[:length * 8]
     else:
         log.warning("Unrecognised Meta event: {}".format(type))
-        # skip the data anyway
-        remainder = remainder[length * 8:]
 
     return remainder, event
 
