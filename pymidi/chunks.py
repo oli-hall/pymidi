@@ -12,15 +12,23 @@ handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)
 log.addHandler(handler)
 
 
+HEADER_TYPE = b"MThd"
+TRACK_TYPE = b"MTrk"
+
+META_EVENT_PREFIX = BitArray("0xFF")
+F0_SYSEX_EVENT_PREFIX = BitArray("0xF0")
+F7_SYSEX_EVENT_PREFIX = BitArray("0xF7")
+
+
 def process_chunk(type, length, raw_data):
     log.debug("processing chunk (type: {}, length: {} bytes)...".format(type, length))
 
     data = BitArray(raw_data)
 
-    if type == b"MThd":
+    if type == HEADER_TYPE:
         process_header(data)
 
-    elif type == b"MTrk":
+    elif type == TRACK_TYPE:
         process_track_chunk(data)
     else:
         log.info("Found unknown chunk type {}, skipping...".format(type))
@@ -54,30 +62,37 @@ def process_header(data):
     log.info("Track format: {}, num chunks: {}, {}".format(format, track_count, delta_time))
 
 
+# TODO wrap Events in a class/structure, and return an array of all the events in the chunk
 def process_track_chunk(data):
     log.info("Parsing Track Chunk...")
 
     # a series of <delta time><event>
     # <delta time> is a variable length field
     print('data: ', data)
+    print("")
     while len(data) > 0:
         data, delta = variable_length_field(data)
-        print("\nDelta:", delta)
+        print("Delta:", delta)
         print('data: ', data)
+        print("")
         # where <event> is
         # <sysex event>, first byte is F0 or F7
         # TODO extract these prefixes as constants
-        if data[:8] == BitArray("0xF0") or data[:8] == BitArray("0xF7"):
-            data = process_sysex_event(data)
+
+        prefix = data[:8]
+        if prefix == F0_SYSEX_EVENT_PREFIX or prefix == F7_SYSEX_EVENT_PREFIX:
+            data = process_sysex_event(prefix, data[8:])
             print('data: ', data)
         # <meta event> first byte is FF
-        elif data[:8] == BitArray("0xFF"):
+        elif prefix == META_EVENT_PREFIX:
             data = process_meta_event(data)
             print('data: ', data)
         # <midi event>
         else:
             data = process_midi_event(data)
             print('data: ', data)
+
+        print("")
 
 
 # takes BitArray
@@ -219,13 +234,13 @@ def process_meta_event(data):
     return remainder
 
 
-def process_sysex_event(data):
-    remainder, length = variable_length_field(data[8:])
+def process_sysex_event(prefix, data):
+    remainder, length = variable_length_field(data)
 
-    if data[:8] == BitArray("0xF0"):
+    if prefix == F0_SYSEX_EVENT_PREFIX:
         print("F0 SYSEX EVENT")
         print("Should send MIDI Message: F0 {}".format(remainder[:8 * length]))
-    elif data[:8] == BitArray("0xF7"):
+    elif prefix == F7_SYSEX_EVENT_PREFIX:
         print("F7 SYSEX EVENT")
         print("Should send MIDI Message: {}".format(remainder[:8 * length]))
 
