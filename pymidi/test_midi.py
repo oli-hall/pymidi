@@ -8,7 +8,7 @@ from pymidi.utils import variable_length_field
 class MidiTest(unittest.TestCase):
 
     def test_variable_length_decoding_of_0_returns_correct_result(self):
-        input = "0x00"
+        input = BitArray("0x00")
 
         remainder, extracted = variable_length_field(input)
 
@@ -16,7 +16,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_127_returns_correct_result(self):
-        input = "0x7F"
+        input = BitArray("0x7F")
 
         remainder, extracted = variable_length_field(input)
 
@@ -24,7 +24,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_128_returns_correct_result(self):
-        input = "0x8100"
+        input = BitArray("0x8100")
 
         remainder, extracted = variable_length_field(input)
 
@@ -32,7 +32,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_1000_returns_correct_result(self):
-        input = "0x8768"
+        input = BitArray("0x8768")
 
         remainder, extracted = variable_length_field(input)
 
@@ -40,7 +40,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_16383_returns_correct_result(self):
-        input = "0xFF7F"
+        input = BitArray("0xFF7F")
 
         remainder, extracted = variable_length_field(input)
 
@@ -48,7 +48,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_1000000_returns_correct_result(self):
-        input = "0xBD8440"
+        input = BitArray("0xBD8440")
 
         remainder, extracted = variable_length_field(input)
 
@@ -56,7 +56,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_268435455_returns_correct_result(self):
-        input = "0xFFFFFF7F"
+        input = BitArray("0xFFFFFF7F")
 
         remainder, extracted = variable_length_field(input)
 
@@ -64,7 +64,7 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_268435455_with_excess_data_returns_correct_result_and_correct_remainder(self):
-        input = "0xFFFFFF7F12304FABC"
+        input = BitArray("0xFFFFFF7F12304FABC")
 
         remainder, extracted = variable_length_field(input)
 
