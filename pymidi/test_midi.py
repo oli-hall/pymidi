@@ -56,12 +56,20 @@ class MidiTest(unittest.TestCase):
         self.assertEqual(remainder, BitArray())
 
     def test_variable_length_decoding_of_268435455_returns_correct_result(self):
-        input = "0xFFFFFFFF"
+        input = "0xFFFFFF7F"
 
         remainder, extracted = variable_length_field(input)
 
         self.assertEqual(extracted, 268435455)
         self.assertEqual(remainder, BitArray())
+
+    def test_variable_length_decoding_of_268435455_with_excess_data_returns_correct_result_and_correct_remainder(self):
+        input = "0xFFFFFF7F12304FABC"
+
+        remainder, extracted = variable_length_field(input)
+
+        self.assertEqual(extracted, 268435455)
+        self.assertEqual(remainder, BitArray("0x12304FABC"))
 
 
 if __name__ == "__main__":
