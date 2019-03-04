@@ -26,7 +26,8 @@ def process_chunk(type, length, raw_data):
     data = BitArray(raw_data)
 
     if type == HEADER_TYPE:
-        process_header(data)
+        header = process_header(data)
+        log.info("Header: {}".format(header))
 
     elif type == TRACK_TYPE:
         process_track_chunk(data)
@@ -45,21 +46,29 @@ def process_header(data):
         log.error("Unrecognised format: {}\n Exiting...".format(format))
         exit(1)
 
-    track_count = data[17:32].int
-
     division = data[-16:]
 
     if division[0] == 0:
         # bits 0-14 represent number of delta time units in each quarter-note
-        delta_time = "{} delta time units per quarter-note".format(division[1:].int)
+        division = {
+            "format": "time units per quarter note",
+            "time_units": division[1:].int
+        }
     else:
         # TODO need to test this bit
         # bits 0-7 represent number of delta time units per SMTPE frame
         # bits 8-14 make a negative number, representing number of SMTPE frames per second
-        delta_time = "{} delta time units per SMTPE frame, {} frames per second".format(division[-8:].int,
-                                                                                        division[1:-8])
+        division = {
+            "format": "SMTPE",
+            "time_units_per_frame": division[-8:].int,
+            "frames_per_second": division[1:-8]
+        }
 
-    log.info("Track format: {}, num chunks: {}, {}".format(format, track_count, delta_time))
+    return {
+        "format": format,
+        "track_count": data[17:32].int,
+        "division": division
+    }
 
 
 # TODO wrap Events in a class/structure, and return an array of all the events in the chunk
@@ -70,6 +79,7 @@ def process_track_chunk(data):
     # <delta time> is a variable length field
     print('data: ', data)
     print("")
+    events = []
     while len(data) > 0:
         data, delta = variable_length_field(data)
         print("Delta:", delta)
