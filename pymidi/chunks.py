@@ -26,7 +26,7 @@ def process_chunk(type, length, raw_data):
     data = BitArray(raw_data)
 
     if type == HEADER_TYPE:
-        header = process_header(data)
+        header = process_header(length, data)
         log.info("Header: {}".format(header))
 
     elif type == TRACK_TYPE:
@@ -37,15 +37,18 @@ def process_chunk(type, length, raw_data):
         log.warning("Found unknown chunk type {}, skipping...".format(type))
 
 
-def process_header(data):
+def process_header(length, data):
     log.info("Parsing header chunk...")
-    format = data[:16].int
+    if length != 48:
+        log.error("Expected Length 48 for Header chunk, found {}.\nExiting...")
+        exit(1)
+    format_ = data[:16].int
     # Format 0: a single track
     # Format 1: one or more simultaneous tracks. Normally first Track chunk here is special, and contains
     # all the tempo information in a 'Tempo Map'
     # Format 2: one or more independent tracks
-    if format not in [0, 1, 2]:
-        log.error("Unrecognised format: {}\n Exiting...".format(format))
+    if format_ not in [0, 1, 2]:
+        log.error("Unrecognised format: {}\n Exiting...".format(format_))
         exit(1)
 
     division = data[-16:]
@@ -67,8 +70,8 @@ def process_header(data):
         }
 
     return {
-        "format": format,
-        "track_count": data[17:32].int,
+        "format": format_,
+        "track_count": data[16:32].int,
         "division": division
     }
 
@@ -79,6 +82,8 @@ def process_track_chunk(data):
 
     events = []
     while len(data) > 0:
+        # TODO rewrite this - MIDI events first, then SYSEX/META
+
         data, delta = variable_length_field(data)
         prefix = data[:8]
         if prefix == F0_SYSEX_EVENT_PREFIX or prefix == F7_SYSEX_EVENT_PREFIX:
@@ -114,13 +119,14 @@ def process_meta_event(data):
 
     # TODO make sure that these comparisons are case correct/case-insensitive
     if type == "00":
-        print("Sequence Number")
         # This is an optional event, which must occur only at the start of a track, before any non-zero delta-time.
         #
         # For Format 2 MIDI files, this is used to identify each track.If omitted, the sequences are numbered
         # sequentially in the order the tracks appear.
         #
         # For Format 1 files, this event should occur on the first track only.
+        event["sub_type"] = "Sequence Number"
+        event["sequence_number"] = event_data[:length * 8].bytes
     elif type == "01":
         event["sub_type"] = "Text Event"
         event["text"] = event_data[:length * 8].bytes
@@ -237,8 +243,27 @@ def process_meta_event(data):
     return remainder, event
 
 
+# TODO translate F0 sysex messages into corresponding MIDI messages
+# F0 <length> <bytes>
+# becomes
+# MIDI message F0 <bytes>
+#
+# bytes should end with F7 to mark the end of the sysex message
+# However, multi-packet Sysex messages can be marked as continuations of
+# previous messages by beginning them with F7
+#
+# e.g.
+# F0 03 43 12 00
+# 81 48                 200-tick delta time
+# F7 06 43 12 00 43 12 00
+# 64                    100-tick delta time
+# F7 04 43 12 00 F7
+#
+# Here, a multi-packet message starts  with F0, and continues through
+# several delta-time increments, so each continuation begins with F7,
+# and the last one ends with F7
 def process_sysex_event(prefix, data):
-    remainder, length = variable_length_field(data)
+    data, length = variable_length_field(data)
     if prefix == F0_SYSEX_EVENT_PREFIX:
         subtype = "F0"
     elif prefix == F7_SYSEX_EVENT_PREFIX:
@@ -249,10 +274,10 @@ def process_sysex_event(prefix, data):
     event = {
         "type": "SYSEX",
         "sub_type": subtype,
-        "data": remainder[:8 * length]
+        "data": data[:8 * length]
     }
 
-    return remainder[:8 * length], event
+    return data[:8 * length], event
 
 
 def process_midi_event(data):
