@@ -26,21 +26,23 @@ def process_chunk(type, length, raw_data):
     data = BitArray(raw_data)
 
     if type == HEADER_TYPE:
-        header = process_header(length, data)
-        log.info("Header: {}".format(header))
+        return process_header(length, data)
 
     elif type == TRACK_TYPE:
-        track = process_track_chunk(data)
-        for evt in track["events"]:
-            log.info("Delta: {}, event: {}".format(evt[0], evt[1]))
+        try:
+            return process_track_chunk(data)
+        except Exception as e:
+            log.error("Error processing Track chunk: {}".format(e))
+            return None
     else:
         log.warning("Found unknown chunk type {}, skipping...".format(type))
+        return None
 
 
 def process_header(length, data):
     log.info("Parsing header chunk...")
-    if length != 48:
-        log.error("Expected Length 48 for Header chunk, found {}.\nExiting...")
+    if length != 6:
+        log.error("Expected 6 byte length for Header chunk, found {} bytes.\nExiting...".format(length))
         exit(1)
     format_ = data[:16].int
     # Format 0: a single track
@@ -70,6 +72,7 @@ def process_header(length, data):
         }
 
     return {
+        "type": "header",
         "format": format_,
         "track_count": data[16:32].int,
         "division": division
@@ -100,6 +103,7 @@ def process_track_chunk(data):
             print('data: ', data)
 
     return {
+        "type": "track",
         "events": events
     }
 
@@ -320,8 +324,7 @@ def process_midi_event(data):
         print("Pitch Bend, channel {}, lsb {}, msb {}".format(channel, data[8:16], data[16:24].hex))
         return data[24:]
     else:
-        print("Unrecognised MIDI event {}.\n Exiting...".format(data[:24]))
-        exit(1)
+        raise Exception("Unrecognised MIDI event {}".format(data[:24]))
 
 
 # Already has leading Bn7 trimmed off
