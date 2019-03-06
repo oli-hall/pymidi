@@ -2,7 +2,7 @@ import unittest
 
 from bitstring import BitArray
 
-from pymidi.chunks import parse_chunks, process_header_chunk, process_track_chunk
+from pymidi.chunks import parse_chunks, process_header_chunk, process_track_chunk, HEADER, TRACK
 from pymidi.events import META_TYPE
 
 FORMAT_0_EXAMPLE = "data/format_0_example_1.mid"
@@ -16,17 +16,17 @@ class ChunksTest(unittest.TestCase):
             chunks = parse_chunks(f)
 
         self.assertEqual(len(chunks), 2)
-        self.assertEqual(chunks[0]["type"], "header")
-        self.assertEqual(chunks[1]["type"], "track")
+        self.assertEqual(chunks[0]["type"], HEADER)
+        self.assertEqual(chunks[1]["type"], TRACK)
 
     def test_parsing_format_1_file_results_in_header_and_track_chunk(self):
         with open(FORMAT_1_EXAMPLE, "rb") as f:
             chunks = parse_chunks(f)
 
         self.assertEqual(len(chunks), 5)
-        self.assertEqual(chunks[0]["type"], "header")
+        self.assertEqual(chunks[0]["type"], HEADER)
         for chk in chunks[1:]:
-            self.assertEqual(chk["type"], "track")
+            self.assertEqual(chk["type"], TRACK)
 
     def test_parsing_format_0_file_parses_header_correctly(self):
         with open(FORMAT_0_EXAMPLE, "rb") as f:
@@ -34,7 +34,7 @@ class ChunksTest(unittest.TestCase):
 
         header = chunks[0]
 
-        self.assertEqual(header["type"], "header")
+        self.assertEqual(header["type"], HEADER)
         self.assertEqual(header["format"], 0)
         self.assertEqual(header["track_count"], 1)
 
@@ -49,7 +49,7 @@ class ChunksTest(unittest.TestCase):
 
         header = chunks[0]
 
-        self.assertEqual(header["type"], "header")
+        self.assertEqual(header["type"], HEADER)
         self.assertEqual(header["format"], 1)
         self.assertEqual(header["track_count"], 4)
 
@@ -64,7 +64,7 @@ class ChunksTest(unittest.TestCase):
 
         tempo_track = chunks[1]
 
-        self.assertEqual(tempo_track["type"], "track")
+        self.assertEqual(tempo_track["type"], TRACK)
         self.assertEqual(len(tempo_track["events"]), 3)
 
         # only testing overall sequence of events, rather than every event field
@@ -89,7 +89,7 @@ class ChunksTest(unittest.TestCase):
 
         header = process_header_chunk(6, input)
 
-        self.assertEqual(header["type"], "header")
+        self.assertEqual(header["type"], HEADER)
         self.assertEqual(header["format"], 0)
         self.assertEqual(header["track_count"], 1)
 
@@ -111,7 +111,7 @@ class ChunksTest(unittest.TestCase):
 
         track = process_track_chunk(input)
 
-        self.assertEqual(track["type"], "track")
+        self.assertEqual(track["type"], TRACK)
         self.assertEqual(len(track["events"]), 1)
 
         delta_time = track["events"][0][0]

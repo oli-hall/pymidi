@@ -17,6 +17,8 @@ log.addHandler(handler)
 
 HEADER_TYPE = b"MThd"
 TRACK_TYPE = b"MTrk"
+HEADER = "header"
+TRACK = "track"
 
 
 def parse_chunks(f):
@@ -83,7 +85,7 @@ def process_header_chunk(length, data):
         }
 
     return {
-        "type": "header",
+        "type": HEADER,
         "format": format_,
         "track_count": data[16:32].int,
         "division": division
@@ -115,6 +117,6 @@ def process_track_chunk(data):
             print('data: ', data)
 
     return {
-        "type": "track",
+        "type": TRACK,
         "events": events
     }
