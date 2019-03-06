@@ -28,8 +28,6 @@ class ChunksTest(unittest.TestCase):
         with open(FORMAT_0_EXAMPLE, "rb") as f:
             chunks = parse_chunks(f)
 
-        self.assertEqual(len(chunks), 2)
-
         header = chunks[0]
 
         self.assertEqual(header["type"], "header")
@@ -45,8 +43,6 @@ class ChunksTest(unittest.TestCase):
         with open(FORMAT_1_EXAMPLE, "rb") as f:
             chunks = parse_chunks(f)
 
-        self.assertEqual(len(chunks), 5)
-
         header = chunks[0]
 
         self.assertEqual(header["type"], "header")
@@ -57,3 +53,27 @@ class ChunksTest(unittest.TestCase):
 
         self.assertEqual(division["format"], "time units per quarter note")
         self.assertEqual(division["time_units"], 96)
+
+    def test_parsing_format_1_file_parses_tempo_track_correctly(self):
+        with open(FORMAT_1_EXAMPLE, "rb") as f:
+            chunks = parse_chunks(f)
+
+        tempo_track = chunks[1]
+
+        self.assertEqual(tempo_track["type"], "track")
+        self.assertEqual(len(tempo_track["events"]), 3)
+
+        # only testing overall sequence of events, rather than every event field
+        events = tempo_track["events"]
+
+        self.assertEqual(events[0][0], 0)
+        self.assertEqual(events[0][1]["type"], "META")
+        self.assertEqual(events[0][1]["sub_type"], "Time Signature")
+
+        self.assertEqual(events[1][0], 0)
+        self.assertEqual(events[1][1]["type"], "META")
+        self.assertEqual(events[1][1]["sub_type"], "Set Tempo")
+
+        self.assertEqual(events[2][0], 384)
+        self.assertEqual(events[2][1]["type"], "META")
+        self.assertEqual(events[2][1]["sub_type"], "End of Track")
