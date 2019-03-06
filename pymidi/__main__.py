@@ -2,9 +2,8 @@ import logging
 import sys
 
 import click
-from bitstring import BitArray
 
-from pymidi.chunks import process_chunk
+from pymidi.chunks import parse_chunks
 
 log = logging.getLogger(__name__)
 log.setLevel('INFO')
@@ -39,19 +38,6 @@ def main(file):
                         print(k, v)
                     print("")
             print("")
-
-
-def parse_chunks(f):
-    chunks = []
-    chunk_type = f.read(4)
-    while chunk_type:
-        length = BitArray(f.read(4)).int
-
-        chunks.append(process_chunk(chunk_type, length, f.read(length)))
-
-        chunk_type = f.read(4)
-
-    return chunks
 
 
 if __name__ == "__main__":

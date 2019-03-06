@@ -401,3 +401,16 @@ def process_channel_mode_message(data, channel):
         # TODO should this exit if this case is reached?
 
     return data[12:]
+
+
+def parse_chunks(f):
+    chunks = []
+    chunk_type = f.read(4)
+    while chunk_type:
+        length = BitArray(f.read(4)).int
+
+        chunks.append(process_chunk(chunk_type, length, f.read(length)))
+
+        chunk_type = f.read(4)
+
+    return chunks
