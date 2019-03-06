@@ -54,8 +54,7 @@ def process_chunk(type, length, raw_data):
 def process_header(length, data):
     log.info("Parsing header chunk...")
     if length != 6:
-        log.error("Expected 6 byte length for Header chunk, found {} bytes.\nExiting...".format(length))
-        exit(1)
+        raise Exception("Expected 6 byte length for Header chunk, found {} bytes.".format(length))
     format_ = data[:16].int
     # Format 0: a single track
     # Format 1: one or more simultaneous tracks. Normally first Track chunk here is special, and contains

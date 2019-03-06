@@ -1,5 +1,8 @@
 import unittest
-from pymidi.chunks import parse_chunks
+
+from bitstring import BitArray
+
+from pymidi.chunks import parse_chunks, process_header
 from pymidi.events import META_TYPE
 
 FORMAT_0_EXAMPLE = "data/format_0_example_1.mid"
@@ -78,3 +81,31 @@ class ChunksTest(unittest.TestCase):
         self.assertEqual(events[2][0], 384)
         self.assertEqual(events[2][1]["type"], META_TYPE)
         self.assertEqual(events[2][1]["sub_type"], "End of Track")
+
+    # TODO test that different types of chunk are identified correctly and lengths extracted properly
+
+    def test_header_parsing_parses_header_correctly(self):
+        input = BitArray("0x000000010060")
+
+        header = process_header(6, input)
+
+        self.assertEqual(header["type"], "header")
+        self.assertEqual(header["format"], 0)
+        self.assertEqual(header["track_count"], 1)
+
+        division = header["division"]
+
+        self.assertEqual(division["format"], "time units per quarter note")
+        self.assertEqual(division["time_units"], 96)
+
+    def test_header_parsing_raises_exception_if_length_is_not_6(self):
+        input = BitArray("0x000000010060")
+
+        self.assertRaises(Exception, process_header, 5, input)
+        self.assertRaises(Exception, process_header, 7, input)
+        self.assertRaises(Exception, process_header, -1, input)
+        self.assertRaises(Exception, process_header, 9001, input)
+
+
+if __name__ == "__main__":
+    unittest.main()
