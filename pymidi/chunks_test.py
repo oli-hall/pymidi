@@ -14,3 +14,12 @@ class ChunksTest(unittest.TestCase):
         self.assertEqual(len(chunks), 2)
         self.assertEqual(chunks[0]["type"], "header")
         self.assertEqual(chunks[1]["type"], "track")
+
+    def test_parsing_format_1_file_results_in_header_and_track_chunk(self):
+        with open(FORMAT_1_EXAMPLE, "rb") as f:
+            chunks = parse_chunks(f)
+
+        self.assertEqual(len(chunks), 5)
+        self.assertEqual(chunks[0]["type"], "header")
+        for chk in chunks[1:]:
+            self.assertEqual(chk["type"], "track")
