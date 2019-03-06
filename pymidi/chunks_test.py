@@ -106,8 +106,27 @@ class ChunksTest(unittest.TestCase):
         self.assertRaises(Exception, process_header_chunk, -1, input)
         self.assertRaises(Exception, process_header_chunk, 9001, input)
 
-    def test_track_parsing_identifies_meta_event_correctly(self):
+    def test_track_parsing_identifies_meta_events_correctly(self):
+        input = BitArray("0x00FF58040402180800FF2F00")
+
+        track = process_track_chunk(input)
+
+        self.assertEqual(track["type"], TRACK)
+        self.assertEqual(len(track["events"]), 2)
+
+        delta_time = track["events"][0][0]
+        event = track["events"][0][1]
+
+        self.assertEqual(delta_time, 0)
+        self.assertEqual(event["type"], META_TYPE)
+        self.assertEqual(event["sub_type"], "Time Signature")
+
+    def test_track_parsing_raises_exception_if_end_of_track_event_missing(self):
         input = BitArray("0x00FF580404021808")
+
+        self.assertRaises(Exception, process_track_chunk, input)
+
+        input = BitArray("0x00FF2F00")
 
         track = process_track_chunk(input)
 
@@ -119,7 +138,7 @@ class ChunksTest(unittest.TestCase):
 
         self.assertEqual(delta_time, 0)
         self.assertEqual(event["type"], META_TYPE)
-        self.assertEqual(event["sub_type"], "Time Signature")
+        self.assertEqual(event["sub_type"], "End of Track")
 
 
 if __name__ == "__main__":

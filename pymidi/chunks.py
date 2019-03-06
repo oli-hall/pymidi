@@ -95,7 +95,6 @@ def process_header_chunk(length, data):
 # TODO wrap Events in a class/structure, and return an array of all the events in the chunk
 def process_track_chunk(data):
     log.info("Parsing Track Chunk...")
-    # TODO add check for 'End of Track' event
 
     events = []
     while len(data) > 0:
@@ -115,6 +114,9 @@ def process_track_chunk(data):
             log.debug("MIDI event (?)")
             data = process_midi_event(data)
             print('data: ', data)
+
+    if events[-1][1]["sub_type"] != "End of Track":
+        raise Exception("End of Track event missing")
 
     return {
         "type": TRACK,
