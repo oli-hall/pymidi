@@ -5,7 +5,7 @@ from bitstring import BitArray
 from pymidi.utils import variable_length_field
 
 
-class MidiTest(unittest.TestCase):
+class UtilsTest(unittest.TestCase):
 
     def test_variable_length_decoding_of_0_returns_correct_result(self):
         input = BitArray("0x00")
