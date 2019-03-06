@@ -1,5 +1,6 @@
 import unittest
 from pymidi.chunks import parse_chunks
+from pymidi.events import META_TYPE
 
 FORMAT_0_EXAMPLE = "data/format_0_example_1.mid"
 FORMAT_1_EXAMPLE = "data/format_1_example_1.mid"
@@ -67,13 +68,13 @@ class ChunksTest(unittest.TestCase):
         events = tempo_track["events"]
 
         self.assertEqual(events[0][0], 0)
-        self.assertEqual(events[0][1]["type"], "META")
+        self.assertEqual(events[0][1]["type"], META_TYPE)
         self.assertEqual(events[0][1]["sub_type"], "Time Signature")
 
         self.assertEqual(events[1][0], 0)
-        self.assertEqual(events[1][1]["type"], "META")
+        self.assertEqual(events[1][1]["type"], META_TYPE)
         self.assertEqual(events[1][1]["sub_type"], "Set Tempo")
 
         self.assertEqual(events[2][0], 384)
-        self.assertEqual(events[2][1]["type"], "META")
+        self.assertEqual(events[2][1]["type"], META_TYPE)
         self.assertEqual(events[2][1]["sub_type"], "End of Track")

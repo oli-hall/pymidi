@@ -14,6 +14,12 @@ handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)
 log.addHandler(handler)
 
 
+F0_SYSEX_EVENT_PREFIX = BitArray("0xF0")
+F7_SYSEX_EVENT_PREFIX = BitArray("0xF7")
+META_EVENT_PREFIX = BitArray("0xFF")
+META_TYPE = "META"
+
+
 def process_meta_event(data):
     type = data[:8].hex
     data, length = variable_length_field(data[8:])
@@ -22,7 +28,7 @@ def process_meta_event(data):
     remainder = data[length * 8:]
 
     event = {
-        "type": "META",
+        "type": META_TYPE,
         "sub_type": "Unknown",
         "data": event_data
     }
@@ -120,12 +126,12 @@ def process_meta_event(data):
             exit(1)
 
         event["sub_type"] = "Time Signature"
-        event["numerator"] = event_data[:8]
-        event["denominator"] = event_data[8:16]
+        event["numerator"] = event_data[:8].int
+        event["denominator"] = event_data[8:16].int
         # MIDI clocks per metronome click
-        event["clocks_per_tick"] = event_data[16:24]
+        event["clocks_per_tick"] = event_data[16:24].int
         # number of 1/32 notes per 24 MIDI clocks (8 is standard)
-        event["32nd_notes_per_24_clocks"] = event_data[24:32]
+        event["32nd_notes_per_24_clocks"] = event_data[24:32].int
     elif type == "59":
         # Key Signature
         # Key Signature, expressed as the number of sharps or flats, and a major/minor flag.
@@ -307,8 +313,3 @@ def process_channel_mode_message(data, channel):
         # TODO should this exit if this case is reached?
 
     return data[12:]
-
-
-F0_SYSEX_EVENT_PREFIX = BitArray("0xF0")
-F7_SYSEX_EVENT_PREFIX = BitArray("0xF7")
-META_EVENT_PREFIX = BitArray("0xFF")
