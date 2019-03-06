@@ -38,7 +38,7 @@ def process_chunk(type, length, raw_data):
     data = BitArray(raw_data)
 
     if type == HEADER_TYPE:
-        return process_header(length, data)
+        return process_header_chunk(length, data)
 
     elif type == TRACK_TYPE:
         try:
@@ -51,7 +51,7 @@ def process_chunk(type, length, raw_data):
         return None
 
 
-def process_header(length, data):
+def process_header_chunk(length, data):
     log.info("Parsing header chunk...")
     if length != 6:
         raise Exception("Expected 6 byte length for Header chunk, found {} bytes.".format(length))
@@ -93,6 +93,7 @@ def process_header(length, data):
 # TODO wrap Events in a class/structure, and return an array of all the events in the chunk
 def process_track_chunk(data):
     log.info("Parsing Track Chunk...")
+    # TODO add check for 'End of Track' event
 
     events = []
     while len(data) > 0:

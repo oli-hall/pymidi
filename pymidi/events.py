@@ -87,7 +87,6 @@ def process_meta_event(data):
         # This event is not optional.
         # It is used to give the track a clearly defined length, which is essential information if the track is looped
         # or concatenated with another track
-        # TODO add checks to make sure that this event is present
         if length:
             print("End of Track event should not have any length!\nExiting...")
             exit(1)

@@ -2,7 +2,7 @@ import unittest
 
 from bitstring import BitArray
 
-from pymidi.chunks import parse_chunks, process_header
+from pymidi.chunks import parse_chunks, process_header_chunk, process_track_chunk
 from pymidi.events import META_TYPE
 
 FORMAT_0_EXAMPLE = "data/format_0_example_1.mid"
@@ -87,7 +87,7 @@ class ChunksTest(unittest.TestCase):
     def test_header_parsing_parses_header_correctly(self):
         input = BitArray("0x000000010060")
 
-        header = process_header(6, input)
+        header = process_header_chunk(6, input)
 
         self.assertEqual(header["type"], "header")
         self.assertEqual(header["format"], 0)
@@ -101,10 +101,25 @@ class ChunksTest(unittest.TestCase):
     def test_header_parsing_raises_exception_if_length_is_not_6(self):
         input = BitArray("0x000000010060")
 
-        self.assertRaises(Exception, process_header, 5, input)
-        self.assertRaises(Exception, process_header, 7, input)
-        self.assertRaises(Exception, process_header, -1, input)
-        self.assertRaises(Exception, process_header, 9001, input)
+        self.assertRaises(Exception, process_header_chunk, 5, input)
+        self.assertRaises(Exception, process_header_chunk, 7, input)
+        self.assertRaises(Exception, process_header_chunk, -1, input)
+        self.assertRaises(Exception, process_header_chunk, 9001, input)
+
+    def test_track_parsing_identifies_meta_event_correctly(self):
+        input = BitArray("0x00FF580404021808")
+
+        track = process_track_chunk(input)
+
+        self.assertEqual(track["type"], "track")
+        self.assertEqual(len(track["events"]), 1)
+
+        delta_time = track["events"][0][0]
+        event = track["events"][0][1]
+
+        self.assertEqual(delta_time, 0)
+        self.assertEqual(event["type"], META_TYPE)
+        self.assertEqual(event["sub_type"], "Time Signature")
 
 
 if __name__ == "__main__":
