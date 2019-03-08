@@ -195,6 +195,36 @@ class ChunksTest(unittest.TestCase):
         self.assertEqual(event["note"], 48)
         self.assertEqual(event["velocity"], 64)
 
+    # Temp test for identifying which events are going where
+    # Running status!
+    def test_track_parsing_identifies_midi_events_correctly_4(self):
+        input = BitArray("0x00923060003C6000FF2F00")
+
+        track = process_track_chunk(input)
+
+        self.assertEqual(track["type"], TRACK)
+        self.assertEqual(len(track["events"]), 3)
+
+        delta_time = track["events"][0][0]
+        event = track["events"][0][1]
+
+        self.assertEqual(delta_time, 0)
+        self.assertEqual(event["type"], MIDI)
+        self.assertEqual(event["sub_type"], "Note On")
+        self.assertEqual(event["channel"], 3)
+        self.assertEqual(event["note"], 48)
+        self.assertEqual(event["velocity"], 96)
+
+        delta_time = track["events"][1][0]
+        event = track["events"][1][1]
+
+        self.assertEqual(delta_time, 0)
+        self.assertEqual(event["type"], MIDI)
+        self.assertEqual(event["sub_type"], "Note On")
+        self.assertEqual(event["channel"], 3)
+        self.assertEqual(event["note"], 60)
+        self.assertEqual(event["velocity"], 96)
+
 
 if __name__ == "__main__":
     unittest.main()

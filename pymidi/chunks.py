@@ -96,10 +96,10 @@ def process_track_chunk(data):
     log.info("Parsing Track Chunk...")
 
     events = []
+    running_status = None
     while len(data) > 0:
         data, delta = variable_length_field(data)
         prefix = data[:8]
-        running_status = None
         if prefix == F0_SYSEX_EVENT_PREFIX or prefix == F7_SYSEX_EVENT_PREFIX:
             log.debug("Sysex event")
             data, event = process_sysex_event(prefix, data[8:])
