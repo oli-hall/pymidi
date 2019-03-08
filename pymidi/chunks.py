@@ -92,16 +92,14 @@ def process_header_chunk(length, data):
     }
 
 
-# TODO wrap Events in a class/structure, and return an array of all the events in the chunk
 def process_track_chunk(data):
     log.info("Parsing Track Chunk...")
 
     events = []
     while len(data) > 0:
-        # TODO rewrite this - MIDI events first, then SYSEX/META
-
         data, delta = variable_length_field(data)
         prefix = data[:8]
+        running_status = None
         if prefix == F0_SYSEX_EVENT_PREFIX or prefix == F7_SYSEX_EVENT_PREFIX:
             log.debug("Sysex event")
             data, event = process_sysex_event(prefix, data[8:])
@@ -111,9 +109,9 @@ def process_track_chunk(data):
             data, event = process_meta_event(data[8:])
             events.append((delta, event))
         else:
-            log.debug("MIDI event (?)")
-            data = process_midi_event(data)
-            print('data: ', data)
+            log.debug("MIDI event")
+            data, event, running_status = process_midi_event(data, running_status)
+            events.append((delta, event))
 
     if events[-1][1]["sub_type"] != "End of Track":
         raise Exception("End of Track event missing")

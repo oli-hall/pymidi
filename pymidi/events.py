@@ -196,47 +196,93 @@ def process_sysex_event(prefix, data):
     return data[:8 * length], event
 
 
-def process_midi_event(data):
-    print("MIDI event {}".format(data[:24]))
-    channel = data[4:8].hex
+# TODO add in cancels for running status
+def process_midi_event(data, running_status=None):
+    # all MIDI message status bytes (I think):
+    # 8, 9, A, B, C, D, E
 
-    if data[:4] == BitArray("0x8"):
-        # Note Off
-        print("Note Off, channel {}, note {}, velocity {}".format(channel, data[8:16].hex, data[16:24].hex))
-        return data[24:]
-    elif data[:4] == BitArray("0x9"):
-        # Note On
-        print("Note On, channel {}, note {}, velocity {}".format(channel, data[8:16].hex, data[16:24].hex))
-        return data[24:]
-    elif data[:4] == BitArray("0xA"):
-        # Polyphonic Key Pressure
-        print("Polyphonic Key Pressure, channel {}, key {}, pressure {}".format(channel, data[8:16].hex,
-                                                                                data[16:24].hex))
-        return data[24:]
-    elif data[:4] == BitArray("0xB"):
-        if (data[8:16].hex >= "00") and (data[8:16].hex <= "77"):
-            print("Controller Change for channel {} to controller {}, value {}".format(channel, data[8:16].hex,
-                                                                                       data[16:24].hex))
-            return data[24:]
-        elif data[8:12] == BitArray("0x7"):
-            return process_channel_mode_message(data[12:], channel)
-        else:
-            print("Unrecognised message {}\nExiting...".format(data[:24]))
-            exit(1)
-    elif data[:4] == BitArray("0xC"):
-        # Program Change
-        print("Program Change, channel {}, new program num {}".format(channel, data[8:16].hex))
-        return data[16:]
-    elif data[:4] == BitArray("0xD"):
-        # Channel Key Pressure
-        print("Channel Key Pressure, channel {}, channel pressure {}".format(channel, data[8:16].hex))
-        return data[16:]
-    elif data[:4] == BitArray("0xE"):
-        # Pitch Bend
-        print("Pitch Bend, channel {}, lsb {}, msb {}".format(channel, data[8:16], data[16:24].hex))
-        return data[24:]
+    if is_status_byte(data[:4].uint):
+        status = data[:4].uint
+        # Channels are identified from 0 -> F, but are referred to as 1 - 16
+        channel = data[4:8].uint + 1
+        data = data[8:]
     else:
-        raise Exception("Unrecognised MIDI event {}".format(data[:24]))
+        if running_status is not None:
+            status = running_status[0]
+            channel = running_status[1]
+        else:
+            raise Exception("No status byte, and no running status set")
+
+    if status == 8:
+        event = {
+            "type": MIDI,
+            "sub_type": "Note Off",
+            "channel": channel,
+            "note": data[:8].uint,
+            "velocity": data[8:16].uint
+        }
+        return data[16:], event, (status, channel)
+    elif status == 9:
+        event = {
+            "type": MIDI,
+            "sub_type": "Note On",
+            "channel": channel,
+            "note": data[:8].uint,
+            "velocity": data[8:16].uint
+        }
+        return data[16:], event, (status, channel)
+    elif status == 10:
+        # Polyphonic Key Pressure
+        event = {
+            "type": MIDI,
+            "sub_type": "Polyphonic Key Pressure",
+            "channel": channel,
+            "key": data[:8].uint,
+            "pressure": data[8:16].uint
+        }
+        return data[16:], event, (status, channel)
+    elif status == 11:
+        if (data[:8].hex >= "00") and (data[:8].hex <= "77"):
+            event = {
+                "type": MIDI,
+                "sub_type": "Controller Change",
+                "channel": channel,
+                "new_controller": data[:8].int,
+                "value": data[8:16].int
+            }
+            return data[16:], event, (status, channel)
+        elif data[:4] == BitArray("0x7"):
+            return process_channel_mode_message(data[4:], channel)
+        else:
+            print("Unrecognised message {}\nExiting...".format(data[:16]))
+            exit(1)
+    elif status == 12:
+        event = {
+            "type": MIDI,
+            "sub_type": "Program Change",
+            "channel": channel,
+            "new_value": data[:8].int
+        }
+        return data[8:], event, (status, channel)
+    elif status == 13:
+        event = {
+            "type": MIDI,
+            "sub_type": "Channel Key Pressure",
+            "channel": channel,
+            "channel_pressure": data[:8].uint
+        }
+        return data[8:], event, (status, channel)
+    elif status == 14:
+        event = {
+            "type": MIDI,
+            "sub_type": "Pitch Bend",
+            "channel": channel,
+            "lsb": data[:8],
+            "msb": data[8:16]
+        }
+        return data[16:], event, (status, channel)
+    else:
+        raise Exception("Unrecognised MIDI event {}".format(data[:16]))
 
 
 # Already has leading Bn7 trimmed off
@@ -313,3 +359,7 @@ def process_channel_mode_message(data, channel):
         # TODO should this exit if this case is reached?
 
     return data[12:]
+
+
+def is_status_byte(byte):
+    return 8 <= byte <= 14
