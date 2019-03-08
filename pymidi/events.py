@@ -197,6 +197,8 @@ def process_sysex_event(prefix, data):
 
 
 # TODO add in cancels for running status
+# if the Running Status has been cancelled, subsequent data-bytes are ignored until a new status-byte is received
+# TODO tidy up this method - it's a mess
 def process_midi_event(data, running_status=None):
     # all MIDI message status bytes (I think):
     # 8, 9, A, B, C, D, E
@@ -223,14 +225,27 @@ def process_midi_event(data, running_status=None):
         }
         return data[16:], event, (status, channel)
     elif status == 9:
-        event = {
-            "type": MIDI,
-            "sub_type": "Note On",
-            "channel": channel,
-            "note": data[:8].uint,
-            "velocity": data[8:16].uint
-        }
-        return data[16:], event, (status, channel)
+        velocity = data[8:16].uint
+        if velocity == 0:
+            # note-on with velocity=0 == note-off with velocity=48
+            event = {
+                "type": MIDI,
+                "sub_type": "Note Off",
+                "channel": channel,
+                "note": data[:8].uint,
+                "velocity": 48
+            }
+            # TODO does this affect running status potentially?
+            return data[16:], event, (8, channel)
+        else:
+            event = {
+                "type": MIDI,
+                "sub_type": "Note On",
+                "channel": channel,
+                "note": data[:8].uint,
+                "velocity": velocity
+            }
+            return data[16:], event, (status, channel)
     elif status == 10:
         # Polyphonic Key Pressure
         event = {
