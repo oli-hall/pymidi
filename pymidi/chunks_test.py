@@ -3,7 +3,7 @@ import unittest
 from bitstring import BitArray
 
 from pymidi.chunks import parse_chunks, process_header_chunk, process_track_chunk, HEADER, TRACK
-from pymidi.events import META_TYPE
+from pymidi.events import META, MIDI
 
 FORMAT_0_EXAMPLE = "data/format_0_example_1.mid"
 FORMAT_1_EXAMPLE = "data/format_1_example_1.mid"
@@ -71,15 +71,15 @@ class ChunksTest(unittest.TestCase):
         events = tempo_track["events"]
 
         self.assertEqual(events[0][0], 0)
-        self.assertEqual(events[0][1]["type"], META_TYPE)
+        self.assertEqual(events[0][1]["type"], META)
         self.assertEqual(events[0][1]["sub_type"], "Time Signature")
 
         self.assertEqual(events[1][0], 0)
-        self.assertEqual(events[1][1]["type"], META_TYPE)
+        self.assertEqual(events[1][1]["type"], META)
         self.assertEqual(events[1][1]["sub_type"], "Set Tempo")
 
         self.assertEqual(events[2][0], 384)
-        self.assertEqual(events[2][1]["type"], META_TYPE)
+        self.assertEqual(events[2][1]["type"], META)
         self.assertEqual(events[2][1]["sub_type"], "End of Track")
 
     # TODO test that different types of chunk are identified correctly and lengths extracted properly
@@ -118,7 +118,7 @@ class ChunksTest(unittest.TestCase):
         event = track["events"][0][1]
 
         self.assertEqual(delta_time, 0)
-        self.assertEqual(event["type"], META_TYPE)
+        self.assertEqual(event["type"], META)
         self.assertEqual(event["sub_type"], "Time Signature")
 
     def test_track_parsing_raises_exception_if_end_of_track_event_missing(self):
@@ -137,8 +137,63 @@ class ChunksTest(unittest.TestCase):
         event = track["events"][0][1]
 
         self.assertEqual(delta_time, 0)
-        self.assertEqual(event["type"], META_TYPE)
+        self.assertEqual(event["type"], META)
         self.assertEqual(event["sub_type"], "End of Track")
+
+    def test_track_parsing_identifies_midi_events_correctly(self):
+        input = BitArray("0x00C00500FF2F00")
+
+        track = process_track_chunk(input)
+
+        self.assertEqual(track["type"], TRACK)
+        self.assertEqual(len(track["events"]), 2)
+
+        delta_time = track["events"][0][0]
+        event = track["events"][0][1]
+
+        self.assertEqual(delta_time, 0)
+        self.assertEqual(event["type"], MIDI)
+        self.assertEqual(event["sub_type"], "Program Change")
+        self.assertEqual(event["channel"], 1)
+        self.assertEqual(event["new_value"], 5)
+
+    # Temp test for identifying which events are going where
+    def test_track_parsing_identifies_midi_events_correctly_2(self):
+        input = BitArray("0x0092306000FF2F00")
+
+        track = process_track_chunk(input)
+
+        self.assertEqual(track["type"], TRACK)
+        self.assertEqual(len(track["events"]), 2)
+
+        delta_time = track["events"][0][0]
+        event = track["events"][0][1]
+
+        self.assertEqual(delta_time, 0)
+        self.assertEqual(event["type"], MIDI)
+        self.assertEqual(event["sub_type"], "Note On")
+        self.assertEqual(event["channel"], 3)
+        self.assertEqual(event["note"], 48)
+        self.assertEqual(event["velocity"], 96)
+
+    # Temp test for identifying which events are going where
+    def test_track_parsing_identifies_midi_events_correctly_3(self):
+        input = BitArray("0x814082304000FF2F00")
+
+        track = process_track_chunk(input)
+
+        self.assertEqual(track["type"], TRACK)
+        self.assertEqual(len(track["events"]), 2)
+
+        delta_time = track["events"][0][0]
+        event = track["events"][0][1]
+
+        self.assertEqual(delta_time, 192)
+        self.assertEqual(event["type"], MIDI)
+        self.assertEqual(event["sub_type"], "Note Off")
+        self.assertEqual(event["channel"], 3)
+        self.assertEqual(event["note"], 48)
+        self.assertEqual(event["velocity"], 64)
 
 
 if __name__ == "__main__":

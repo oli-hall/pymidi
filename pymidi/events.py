@@ -17,7 +17,8 @@ log.addHandler(handler)
 F0_SYSEX_EVENT_PREFIX = BitArray("0xF0")
 F7_SYSEX_EVENT_PREFIX = BitArray("0xF7")
 META_EVENT_PREFIX = BitArray("0xFF")
-META_TYPE = "META"
+META = "META"
+MIDI = "MIDI"
 
 
 def process_meta_event(data):
@@ -28,7 +29,7 @@ def process_meta_event(data):
     remainder = data[length * 8:]
 
     event = {
-        "type": META_TYPE,
+        "type": META,
         "sub_type": "Unknown",
         "data": event_data
     }
