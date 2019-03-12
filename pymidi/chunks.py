@@ -8,10 +8,10 @@ from pymidi.events import process_meta_event, process_sysex_event, process_midi_
 from pymidi.utils import variable_length_field
 
 log = logging.getLogger(__name__)
-log.setLevel("DEBUG")
+log.setLevel("INFO")
 handler = logging.StreamHandler(stream=sys.stderr)
-handler.setFormatter(logging.Formatter(fmt='%(asctime)s %(levelname)s %(message)s',
-                                       datefmt='%Y-%m-%d %H:%M:%S'))
+handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s %(message)s",
+                                       datefmt="%Y-%m-%d %H:%M:%S"))
 log.addHandler(handler)
 
 
