@@ -35,8 +35,6 @@ def parse_chunks(f):
 
 
 def process_chunk(type, length, raw_data):
-    log.debug("processing chunk (type: {}, length: {} bytes)...".format(type, length))
-
     data = BitArray(raw_data)
 
     if type == HEADER_TYPE:
@@ -101,15 +99,12 @@ def process_track_chunk(data):
         data, delta = variable_length_field(data)
         prefix = data[:8]
         if prefix == F0_SYSEX_EVENT_PREFIX or prefix == F7_SYSEX_EVENT_PREFIX:
-            log.debug("Sysex event")
             data, event = process_sysex_event(prefix, data[8:])
             events.append((delta, event))
         elif prefix == META_EVENT_PREFIX:
-            log.debug("Meta event")
             data, event = process_meta_event(data[8:])
             events.append((delta, event))
         else:
-            log.debug("MIDI event")
             data, event, running_status = process_midi_event(data, running_status)
             events.append((delta, event))
 
